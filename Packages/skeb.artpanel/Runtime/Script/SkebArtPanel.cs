@@ -11,12 +11,12 @@ using UnityEditor;
 using UdonSharpEditor;
 #endif
 
-namespace skeb.vrcartframe
+namespace skeb.skebartpanel
 {
     [UdonBehaviourSyncMode(BehaviourSyncMode.None)]
-    public class VRCArtFrame : UdonSharpBehaviour
+    public class SkebArtPanel : UdonSharpBehaviour
     {
-        private void DebugLog(string msg = "", string color = "yellow", string title = "VRCArtFrame")
+        private void DebugLog(string msg = "", string color = "yellow", string title = "SkebArtPanel")
         {
             Debug.Log($"[<color={color}>{title}</color>]{msg}");
         }
@@ -36,7 +36,7 @@ namespace skeb.vrcartframe
         /// 　SkebのID
         /// </summary>
         [HideInInspector]
-        public string screen_name = "nalgami";
+        public string screen_name = "hoge";
         #endregion
 
         #region variables
@@ -151,9 +151,14 @@ namespace skeb.vrcartframe
         }
 
 #if UNITY_EDITOR && !COMPILER_UDONSHARP
-        [CustomEditor(typeof(VRCArtFrame))]
+        [CustomEditor(typeof(SkebArtPanel))]
         public class VRCArtFrame_Editor : Editor
         {
+            public static void MessageBox(string message, string ok)
+            {
+                EditorUtility.DisplayDialog("SkebArtPanel", message, ok);
+            }
+
             public override void OnInspectorGUI()
             {
                 UdonSharpGUI.DrawConvertToUdonBehaviourButton(target);
@@ -163,10 +168,14 @@ namespace skeb.vrcartframe
 
                 GUILayout.Space(10);
 
-                VRCArtFrame t = target as VRCArtFrame;
+                SkebArtPanel t = target as SkebArtPanel;
 
                 EditorGUI.BeginChangeCheck();
-                t.screen_name = EditorGUILayout.TextField("スクリーン名", t.screen_name);
+                t.screen_name = EditorGUILayout.TextField("ユーザーID / UserID", t.screen_name);
+                GUILayout.Label("ユーザーIDは https://skeb.jp/@hoge の@以降にあるIDを入れてください。");
+                GUILayout.Space(5);
+                GUILayout.Label("Please enter the ID after the @ in https://skeb.jp/@hoge.");
+
                 if (EditorGUI.EndChangeCheck())
                 {
                     t.url_profiles = new VRCUrl[60];
@@ -177,16 +186,17 @@ namespace skeb.vrcartframe
                 }
 
                 GUILayout.Space(5);
-                t.mat_profile = EditorGUILayout.ObjectField("絵を入れるマテリアル", t.mat_profile, typeof(Material), true) as Material;
-                if (GUILayout.Button("マテリアル初期化"))
+                t.interval = EditorGUILayout.IntField("インターバル / Interval", t.interval);
+
+                GUILayout.Space(5);
+                t.mat_profile = EditorGUILayout.ObjectField("マテリアル / Material", t.mat_profile, typeof(Material), true) as Material;
+
+                if (t.mat_profile == null)
                 {
                     string path = AssetDatabase.GUIDToAssetPath("02716fbb94d80ae4c88f868b73908b00");
                     if (!string.IsNullOrEmpty(path))
                         t.mat_profile = AssetDatabase.LoadAssetAtPath<Material>(path);
                 }
-
-                GUILayout.Space(5);
-                t.interval = EditorGUILayout.IntField("インターバル (単位 : 分)", t.interval);
 
                 serializedObject.ApplyModifiedProperties();
                 serializedObject.Update();
