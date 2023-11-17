@@ -206,7 +206,6 @@ namespace skeb.skebartpanel
                 EditorGUI.BeginChangeCheck();
                 t.screen_name = EditorGUILayout.TextField("ユーザーID / UserID", t.screen_name);
                 GUILayout.Label("ユーザーIDは https://skeb.jp/@hoge の@以降にあるIDを入れてください。");
-                GUILayout.Space(5);
                 GUILayout.Label("Please enter the ID after the @ in https://skeb.jp/@hoge.");
 
                 GUILayout.Space(10);
@@ -274,5 +273,4 @@ namespace skeb.skebartpanel
         }
 #endif
     }
-
 }
