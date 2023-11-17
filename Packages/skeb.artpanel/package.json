@@ -1,7 +1,7 @@
 {
   "name": "skeb.artpanel",
   "displayName": "SkebArtPanel",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "This is an UdonSharp script that downloads Skeb's illustrations on VRChat.",
   "gitDependencies": {},
   "vpmDependencies": {

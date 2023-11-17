@@ -22,6 +22,18 @@ namespace skeb.skebartpanel
         }
 
         #region serialize variables
+        public MeshRenderer mesh;
+
+        /// <summary>
+        /// GUI用
+        /// </summary>
+        public bool isCustomMaterial;
+
+        /// <summary>
+        /// パネル番号
+        /// </summary>
+        public int panel_index = 0;
+
         /// <summary>
         /// ダウンロードしたイラストを入れるMaterial
         /// </summary>
@@ -35,7 +47,6 @@ namespace skeb.skebartpanel
         /// <summary>
         /// 　SkebのID
         /// </summary>
-        [HideInInspector]
         public string screen_name = "hoge";
         #endregion
 
@@ -87,19 +98,7 @@ namespace skeb.skebartpanel
         {
             if (mat_profile != null)
             {
-                //発火時だとUdonReceiverがエラーを吐くためちょっと待たせる
-                currentTime += Time.deltaTime;
-                if (currentTime > nextTime)
-                {
-                    int Index = GetIndex();
-
-                    VRCUrl url = url_profiles[Index];
-                    DownloadImage(url, mat_profile);
-                    currentTime = 0.0f;
-                    nextTime = 60 * interval;
-
-                    DebugLog($"Reloading image now. interval is {interval}min.");
-                }
+                ReloadImageLoop();
             }
         }
 
@@ -123,6 +122,25 @@ namespace skeb.skebartpanel
         {
             DateTime time = DateTime.Now;
             return time.Minute / interval;
+        }
+
+        private void ReloadImageLoop()
+        {
+            if (currentTime > nextTime)
+            {
+                int Index = GetIndex();
+
+                VRCUrl url = url_profiles[Index];
+                DownloadImage(url, mat_profile);
+                currentTime = 0.0f;
+                nextTime = 60 * interval;
+
+                DebugLog($"Reloading image now. interval is {interval}min.");
+            }
+            else
+            {
+                currentTime += Time.deltaTime;
+            }
         }
         #endregion
 
@@ -151,24 +169,39 @@ namespace skeb.skebartpanel
         }
 
 #if UNITY_EDITOR && !COMPILER_UDONSHARP
+
         [CustomEditor(typeof(SkebArtPanel))]
         public class VRCArtFrame_Editor : Editor
         {
-            public static void MessageBox(string message, string ok)
+            string[] guids = new string[] { 
+                "02716fbb94d80ae4c88f868b73908b00", "b557273905391dc45b68cea1b35a4a40", 
+                "97566aeeaee35914e913384b42a1a193", "5205e0ba4aa7b44409bcd1136057627f",
+                "dd52660c231bc9249bb480182764e449", "770e70378e776384995d8dacadb96caf",
+                "da668dd5ccbcfb244a035befb062bc3e", "8f4a6ec1ad42c4642a059f0cb0085657",
+                "1b17e9c661022fe4f880efa8f6d88277", "a9ac48fcc28d31840a405cc3e1f8bcb0" };
+
+            static int MaxPanelLen = 9;
+
+            private void RefleshMaterial(SkebArtPanel t)
             {
-                EditorUtility.DisplayDialog("SkebArtPanel", message, ok);
+                if (t.mat_profile != null && t.mesh != null)
+                {
+                    t.mesh.materials = new Material[] { t.mat_profile };
+                    EditorUtility.SetDirty(t.mesh);
+                }
             }
 
-            public override void OnInspectorGUI()
+            private void DrawFields(SkebArtPanel t)
             {
-                UdonSharpGUI.DrawConvertToUdonBehaviourButton(target);
-                UdonSharpGUI.DrawProgramSource(target);
-                UdonSharpGUI.DrawSyncSettings(target);
-                UdonSharpGUI.DrawUtilities(target);
+                EditorGUI.BeginChangeCheck();
+                t.mesh = EditorGUILayout.ObjectField("メッシュ / mesh", t.mesh, typeof(MeshRenderer), true) as MeshRenderer;
+                if (EditorGUI.EndChangeCheck())
+                {
+                    //メッシュのマテリアルを更新
+                    RefleshMaterial(t);
+                }
 
-                GUILayout.Space(10);
-
-                SkebArtPanel t = target as SkebArtPanel;
+                GUILayout.Space(15);
 
                 EditorGUI.BeginChangeCheck();
                 t.screen_name = EditorGUILayout.TextField("ユーザーID / UserID", t.screen_name);
@@ -176,27 +209,64 @@ namespace skeb.skebartpanel
                 GUILayout.Space(5);
                 GUILayout.Label("Please enter the ID after the @ in https://skeb.jp/@hoge.");
 
+                GUILayout.Space(10);
+
+                t.panel_index = EditorGUILayout.IntSlider("パネル番号 / Panel", t.panel_index, 0, MaxPanelLen);
+
+                //フィールドが変わった場合はURL生成し直し
                 if (EditorGUI.EndChangeCheck())
                 {
+                    if (t.panel_index > MaxPanelLen)
+                        t.panel_index = MaxPanelLen;
+
+                    if (0 > t.panel_index)
+                        t.panel_index = 0;
+
                     t.url_profiles = new VRCUrl[60];
                     for (int i = 0; i < 60; i++)
                     {
-                        t.url_profiles[i] = new VRCUrl("https://vrcart.skeb.jp/api/v2/externals/vrc_art_frame/image?screen_name=" + t.screen_name + $"&i={i}");
+                        t.url_profiles[i] = new VRCUrl("https://vrcart.skeb.jp/api/v2/externals/vrc_art_frame/image?screen_name=" + t.screen_name + $"&i={i + (60 * t.panel_index)}");
                     }
+
+                    if (!t.isCustomMaterial)
+                    {
+                        string path = AssetDatabase.GUIDToAssetPath(guids[t.panel_index]);
+                        if (!string.IsNullOrEmpty(path))
+                            t.mat_profile = AssetDatabase.LoadAssetAtPath<Material>(path);
+
+                        EditorUtility.SetDirty(target);
+                    }
+
+                    //メッシュのマテリアルを更新
+                    RefleshMaterial(t);
                 }
 
-                GUILayout.Space(5);
+                //分刻みのインターバルを指定
                 t.interval = EditorGUILayout.IntField("インターバル / Interval", t.interval);
 
-                GUILayout.Space(5);
-                t.mat_profile = EditorGUILayout.ObjectField("マテリアル / Material", t.mat_profile, typeof(Material), true) as Material;
+                GUILayout.Space(10);
 
-                if (t.mat_profile == null)
+                //自身で作成したマテリアルを使用する場合はチェックを入れてもらう
+                t.isCustomMaterial = EditorGUILayout.ToggleLeft("カスタムマテリアル / Use custom material", t.isCustomMaterial);
+
+                //カスタムマテリアルがオンの場合はマテリアルを触れるように
+                EditorGUI.BeginDisabledGroup(!t.isCustomMaterial);
+                EditorGUI.BeginChangeCheck();
+                t.mat_profile = EditorGUILayout.ObjectField("マテリアル / Material", t.mat_profile, typeof(Material), true) as Material;
+                if (EditorGUI.EndChangeCheck())
                 {
-                    string path = AssetDatabase.GUIDToAssetPath("02716fbb94d80ae4c88f868b73908b00");
-                    if (!string.IsNullOrEmpty(path))
-                        t.mat_profile = AssetDatabase.LoadAssetAtPath<Material>(path);
+                    //メッシュのマテリアルを更新
+                    RefleshMaterial(t);
                 }
+
+                EditorGUI.EndDisabledGroup();
+            }
+
+            public override void OnInspectorGUI()
+            {
+                SkebArtPanel t = target as SkebArtPanel;
+
+                DrawFields(t);
 
                 serializedObject.ApplyModifiedProperties();
                 serializedObject.Update();

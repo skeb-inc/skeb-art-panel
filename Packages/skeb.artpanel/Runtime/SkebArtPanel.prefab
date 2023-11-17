@@ -26,7 +26,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2652905753332805391}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalPosition: {x: 0, y: -0.893, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children:
   - {fileID: 2652905754021876176}
@@ -55,6 +55,9 @@ MonoBehaviour:
     PrefabModifications: []
     SerializationNodes: []
   _udonSharpBackingUdonBehaviour: {fileID: 2652905753332805390}
+  mesh: {fileID: 2652905754021876178}
+  isCustomMaterial: 0
+  panel_index: 0
   mat_profile: {fileID: 2100000, guid: 02716fbb94d80ae4c88f868b73908b00, type: 2}
   interval: 1
   screen_name: hoge
