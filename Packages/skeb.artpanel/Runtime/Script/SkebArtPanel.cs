@@ -21,7 +21,7 @@ namespace skeb.skebartpanel
             Debug.Log($"[<color={color}>{title}</color>]{msg}");
         }
 
-        #region serialize variables
+        #region Serialized Variables
         public MeshRenderer mesh;
 
         /// <summary>
@@ -45,12 +45,17 @@ namespace skeb.skebartpanel
         public int interval = 1;
 
         /// <summary>
+        /// 納品者として表示するか
+        /// </summary>
+        public bool isCreator = false;
+
+        /// <summary>
         /// 　SkebのID
         /// </summary>
         public string screen_name = "hoge";
         #endregion
 
-        #region variables
+        #region Variables
         /// <summary>
         /// イラストをダウンロードする際の設定
         /// </summary>
@@ -113,7 +118,6 @@ namespace skeb.skebartpanel
 
             DebugLog("OnDestroy");
         }
-
 #endif
         #endregion
 
@@ -123,7 +127,18 @@ namespace skeb.skebartpanel
             DateTime time = DateTime.Now;
             return time.Minute / interval;
         }
+        private void DownloadImage(VRCUrl url, Material mat)
+        {
+            if (downloader == null)
+                downloader = new VRCImageDownloader();
 
+            if (TargetUdon == null)
+                TargetUdon = GetComponent<UdonBehaviour>();
+
+            downloader.DownloadImage(url, mat, TargetUdon, info);
+
+            DebugLog($"Downloading Image -> {url}");
+        }
         private void ReloadImageLoop()
         {
             if (currentTime > nextTime)
@@ -144,19 +159,7 @@ namespace skeb.skebartpanel
         }
         #endregion
 
-        private void DownloadImage(VRCUrl url, Material mat)
-        {
-            if (downloader == null)
-                downloader = new VRCImageDownloader();
-
-            if (TargetUdon == null)
-                TargetUdon = GetComponent<UdonBehaviour>();
-
-            downloader.DownloadImage(url, mat, TargetUdon, info);
-
-            DebugLog($"Downloading Image -> {url}");
-        }
-
+        #region VRChat Function
         public override void OnImageLoadSuccess(IVRCImageDownload result)
         {
             DebugLog($"images successfully downloaded");
@@ -167,12 +170,24 @@ namespace skeb.skebartpanel
             DebugLog($"OnImageLoadError");
             DebugLog($"{result.ErrorMessage}");
         }
+        #endregion
 
 #if UNITY_EDITOR && !COMPILER_UDONSHARP
 
         [CustomEditor(typeof(SkebArtPanel))]
         public class VRCArtFrame_Editor : Editor
         {
+            enum eRole
+            {
+                [InspectorName("Client")] Client,
+                [InspectorName("Creator")] Creator
+            }
+
+            eRole _role = eRole.Client;
+
+            /// <summary>
+            /// 
+            /// </summary>
             string[] guids = new string[] { 
                 "02716fbb94d80ae4c88f868b73908b00", "b557273905391dc45b68cea1b35a4a40", 
                 "97566aeeaee35914e913384b42a1a193", "5205e0ba4aa7b44409bcd1136057627f",
@@ -193,12 +208,17 @@ namespace skeb.skebartpanel
 
             private void DrawFields(SkebArtPanel t)
             {
+                bool isChanged = false;
+
+                _role = t.isCreator ? eRole.Creator : eRole.Client;
+
                 EditorGUI.BeginChangeCheck();
                 t.mesh = EditorGUILayout.ObjectField("メッシュ / mesh", t.mesh, typeof(MeshRenderer), true) as MeshRenderer;
                 if (EditorGUI.EndChangeCheck())
                 {
                     //メッシュのマテリアルを更新
                     RefleshMaterial(t);
+                    isChanged = true;
                 }
 
                 GUILayout.Space(15);
@@ -210,11 +230,15 @@ namespace skeb.skebartpanel
 
                 GUILayout.Space(10);
 
+                _role = (eRole)EditorGUILayout.EnumPopup("モード / Mode", _role);
                 t.panel_index = EditorGUILayout.IntSlider("パネル番号 / Panel", t.panel_index, 0, MaxPanelLen);
 
                 //フィールドが変わった場合はURL生成し直し
                 if (EditorGUI.EndChangeCheck())
                 {
+                    //Playモードになると初期化されるのでこの方法で格納
+                    t.isCreator = _role == eRole.Creator;
+
                     if (t.panel_index > MaxPanelLen)
                         t.panel_index = MaxPanelLen;
 
@@ -224,7 +248,9 @@ namespace skeb.skebartpanel
                     t.url_profiles = new VRCUrl[60];
                     for (int i = 0; i < 60; i++)
                     {
-                        t.url_profiles[i] = new VRCUrl("https://vrcart.skeb.jp/api/v2/externals/vrc_art_frame/image?screen_name=" + t.screen_name + $"&i={i + (60 * t.panel_index)}");
+                        string _role = t.isCreator ? "&role=creator" : "&role=client";
+
+                        t.url_profiles[i] = new VRCUrl("https://vrcart.skeb.jp/api/v2/externals/vrc_art_frame/image?screen_name=" + $"{t.screen_name}&i={i + (60 * t.panel_index)}&role={_role}");
                     }
 
                     if (!t.isCustomMaterial)
@@ -232,12 +258,12 @@ namespace skeb.skebartpanel
                         string path = AssetDatabase.GUIDToAssetPath(guids[t.panel_index]);
                         if (!string.IsNullOrEmpty(path))
                             t.mat_profile = AssetDatabase.LoadAssetAtPath<Material>(path);
-
-                        EditorUtility.SetDirty(target);
                     }
 
                     //メッシュのマテリアルを更新
                     RefleshMaterial(t);
+
+                    isChanged = true;
                 }
 
                 //分刻みのインターバルを指定
@@ -256,9 +282,13 @@ namespace skeb.skebartpanel
                 {
                     //メッシュのマテリアルを更新
                     RefleshMaterial(t);
+                    isChanged = true;
                 }
 
                 EditorGUI.EndDisabledGroup();
+
+                if (isChanged)
+                    EditorUtility.SetDirty(target);
             }
 
             public override void OnInspectorGUI()
