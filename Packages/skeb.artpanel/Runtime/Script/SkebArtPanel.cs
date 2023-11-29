@@ -8,7 +8,6 @@ using VRC.Udon;
 
 #if UNITY_EDITOR && !COMPILER_UDONSHARP
 using UnityEditor;
-using UdonSharpEditor;
 #endif
 
 namespace skeb.skebartpanel
@@ -175,16 +174,16 @@ namespace skeb.skebartpanel
 #if UNITY_EDITOR && !COMPILER_UDONSHARP
 
         [CustomEditor(typeof(SkebArtPanel))]
-        public class VRCArtFrame_Editor : Editor
+        public class SkebArtPanel_Editor : Editor
         {
+            #region variables
             enum eRole
             {
                 [InspectorName("Client")] Client,
                 [InspectorName("Creator")] Creator
             }
-
             eRole _role = eRole.Client;
-
+           
             /// <summary>
             /// 
             /// </summary>
@@ -196,7 +195,9 @@ namespace skeb.skebartpanel
                 "1b17e9c661022fe4f880efa8f6d88277", "a9ac48fcc28d31840a405cc3e1f8bcb0" };
 
             static int MaxPanelLen = 9;
+            #endregion
 
+            #region Func
             private void RefleshMaterial(SkebArtPanel t)
             {
                 if (t.mat_profile != null && t.mesh != null)
@@ -290,7 +291,9 @@ namespace skeb.skebartpanel
                 if (isChanged)
                     EditorUtility.SetDirty(target);
             }
+            #endregion
 
+            #region Unity Internal Func
             public override void OnInspectorGUI()
             {
                 SkebArtPanel t = target as SkebArtPanel;
@@ -299,6 +302,58 @@ namespace skeb.skebartpanel
 
                 serializedObject.ApplyModifiedProperties();
                 serializedObject.Update();
+            }
+            #endregion
+        }
+
+        public class SkebArtPanel_Window : EditorWindow
+        {
+            private static void DebugLog(string msg = "", string color = "yellow", string title = nameof(SkebArtPanel))
+            {
+                Debug.Log($"[<color={color}>{title}</color>]{msg}");
+            }
+
+            #region variable
+            static string guid_prefab = "7c9c39d02dc19a84ba48ae9159e428b3";
+            #endregion
+
+            #region Func
+            private static bool isStringEmptyOrDontExists(string path)
+            {
+                return string.IsNullOrEmpty(path) || !System.IO.File.Exists(path);
+            }
+
+            private static GameObject GetPrefabFromGUID(string guid, string path = "")
+            {
+                string _path = AssetDatabase.GUIDToAssetPath(guid);
+                if (string.IsNullOrEmpty(_path))
+                {
+                    //guid、path両方から取得出来ない場合は返す
+                    if (isStringEmptyOrDontExists(path))
+                        return null;
+
+                    _path = path;
+                }
+
+                return AssetDatabase.LoadAssetAtPath<GameObject>(_path);
+            }
+            #endregion
+
+            [MenuItem("SkebArtPanel/プレハブ設置 (Setup Prefab)")]
+            private static void SetupPrefab()
+            {
+                GameObject prefab = GetPrefabFromGUID(guid_prefab, "Packages/skeb.artpanel/Runtime/SkebArtPanel.prefab");
+                if (prefab == null)
+                {
+                    DebugLog("PrefabがPackages内に存在しません。\nSkeb Art Panelの再配置を行ってください。", "red");
+                    return;
+                }
+
+                GameObject panel = Instantiate(prefab);
+                panel.name = prefab.name;
+                EditorGUIUtility.PingObject(panel);
+
+                DebugLog("設置しました！", "green");
             }
         }
 #endif
