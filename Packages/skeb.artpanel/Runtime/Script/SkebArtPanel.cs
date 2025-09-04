@@ -66,12 +66,17 @@ namespace skeb.skebartpanel
         /// <summary>
         /// イラストをダウンロードする際の設定
         /// </summary>
-        TextureInfo info;
+        private TextureInfo info;
 
         /// <summary>
         /// イメージダウンロード用
         /// </summary>
-        VRCImageDownloader downloader = new VRCImageDownloader();
+        private VRCImageDownloader downloader = new VRCImageDownloader();
+
+        /// <summary>
+        /// テクスチャを破棄するためのキャッシュ
+        /// </summary>
+        private Texture2D texCache = null;
 
         /// <summary>
         /// 60個urlを格納
@@ -81,7 +86,7 @@ namespace skeb.skebartpanel
         /// <summary>
         /// ダウンロードしたイメージを受け取るUdon
         /// </summary>
-        UdonBehaviour TargetUdon;
+        private UdonBehaviour TargetUdon;
         #endregion
 
         #region Unity Functions
@@ -89,7 +94,7 @@ namespace skeb.skebartpanel
         {
             //OnEnabledで発火するとエラーが出るので初期化だけ
             downloader = new VRCImageDownloader();
-                    
+
             DebugLog("OnEnable");
         }
 
@@ -98,7 +103,6 @@ namespace skeb.skebartpanel
             ReloadImageLoop();
         }
 
-#if UNITY_EDITOR
         private void OnDestroy()
         {
             if (downloader != null)
@@ -109,7 +113,6 @@ namespace skeb.skebartpanel
 
             DebugLog("OnDestroy");
         }
-#endif
         #endregion
 
         #region Func
@@ -132,10 +135,10 @@ namespace skeb.skebartpanel
                 return;
             }
 
-            if (downloader == null)
+            if (!Utilities.IsValid(downloader))
                 downloader = new VRCImageDownloader();
 
-            if (TargetUdon == null)
+            if (!Utilities.IsValid(TargetUdon))
                 TargetUdon = GetComponent<UdonBehaviour>();
 
             downloader.DownloadImage(url, mat, TargetUdon, info);
@@ -164,6 +167,11 @@ namespace skeb.skebartpanel
         #region VRChat Function
         public override void OnImageLoadSuccess(IVRCImageDownload result)
         {
+            //前回ダウンロードしたテクスチャは不要なので破棄
+            if (Utilities.IsValid(texCache))
+                Destroy(texCache);
+
+            texCache = result.Result;
             DebugLog($"Image successfully downloaded.");
         }
 
@@ -181,12 +189,12 @@ namespace skeb.skebartpanel
         {
             #region variables
             //eRole _role = eRole.Client;
-           
+
             /// <summary>
             /// 10パターン用のマテリアルのGUID
             /// </summary>
-            string[] guids = new string[] { 
-                "02716fbb94d80ae4c88f868b73908b00", "b557273905391dc45b68cea1b35a4a40", 
+            string[] guids = new string[] {
+                "02716fbb94d80ae4c88f868b73908b00", "b557273905391dc45b68cea1b35a4a40",
                 "97566aeeaee35914e913384b42a1a193", "5205e0ba4aa7b44409bcd1136057627f",
                 "dd52660c231bc9249bb480182764e449", "770e70378e776384995d8dacadb96caf",
                 "da668dd5ccbcfb244a035befb062bc3e", "8f4a6ec1ad42c4642a059f0cb0085657",
@@ -311,7 +319,7 @@ namespace skeb.skebartpanel
 
                 EditorGUI.EndDisabledGroup();
 
-                return isChanged; 
+                return isChanged;
             }
             #endregion
 
@@ -329,7 +337,7 @@ namespace skeb.skebartpanel
             #endregion
         }
 
-        public class SkebArtPanel_Window : EditorWindow
+        public class SkebArtPanelMenuItem
         {
             private static void DebugLog(string msg = "", string color = "yellow", string title = nameof(SkebArtPanel))
             {
@@ -368,11 +376,12 @@ namespace skeb.skebartpanel
                 GameObject prefab = GetPrefabFromGUID(guid_prefab, "Packages/skeb.artpanel/Runtime/SkebArtPanel.prefab");
                 if (prefab == null)
                 {
-                    DebugLog("PrefabがPackages内に存在しません。\nSkeb Art Panelの再配置を行ってください。", "red");
+                    DebugLog("PrefabがPackages内に存在しません。\nSkeb Art Panelの再インポートを行ってください。", "red");
                     return;
                 }
 
-                GameObject panel = Instantiate(prefab);
+                //GameObject panel = Instantiate(prefab);
+                GameObject panel = PrefabUtility.InstantiatePrefab(prefab) as GameObject;
                 panel.name = prefab.name;
                 Undo.RegisterCreatedObjectUndo(panel, "Create SkebArtPanel");
                 EditorGUIUtility.PingObject(panel);
