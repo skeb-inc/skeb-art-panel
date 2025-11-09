@@ -1,12 +1,12 @@
 {
   "name": "skeb.artpanel",
   "displayName": "SkebArtPanel",
-  "version": "1.0.8",
+  "version": "1.0.9",
   "description": "This is an UdonSharp script that downloads Skeb's artworks on VRChat.",
   "gitDependencies": {},
   "vpmDependencies": {
-    "com.vrchat.base" : ">=3.3.0",
-    "com.vrchat.worlds" : ">=3.3.0",
+    "com.vrchat.base": ">=3.3.0",
+    "com.vrchat.worlds": ">=3.3.0",
     "com.vrchat.udonsharp": ">=1.1.9"
   },
   "author": {
@@ -16,5 +16,6 @@
   },
   "legacyFolders": {},
   "legacyFiles": {},
-  "localPath": ""
+  "localPath": "",
+  "unity": "2019.4"
 }

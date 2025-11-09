@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c333ccfdd0cbdbc4ca30cef2dd6e6b9b, type: 3}
   m_Name: SkebArtPanel
   m_EditorClassIdentifier: 
-  serializedUdonProgramAsset: {fileID: 11400000, guid: ffcc6b7cba6fb0940a98e9a68aac643e,
+  serializedUdonProgramAsset: {fileID: 11400000, guid: 9489b89c71d783e479a8356e38371edd,
     type: 2}
   udonAssembly: 
   assemblyError: 
